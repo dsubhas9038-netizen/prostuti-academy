@@ -1,0 +1,55 @@
+# robots.txt for ProstutiAcademy
+# https://prostutiacademy.web.app
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://prostutiacademy.web.app/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Disallow admin and private routes
+Disallow: /admin/
+Disallow: /admin/*
+Disallow: /api/
+Disallow: /api/*
+Disallow: /dashboard/settings
+Disallow: /_next/
+Disallow: /offline
+
+# Allow important public pages
+Allow: /
+Allow: /about
+Allow: /contact
+Allow: /subjects
+Allow: /subjects/*
+Allow: /mock-tests
+Allow: /resources
+Allow: /pyq-analysis
+Allow: /terms
+Allow: /privacy
+Allow: /pricing
+Allow: /leaderboard
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Bing specific
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /

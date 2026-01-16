@@ -1,0 +1,206 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user owns the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if request has valid data
+    function hasValidData() {
+      return request.resource.data.keys().size() > 0;
+    }
+    
+    // ==========================================
+    // USER COLLECTION
+    // ==========================================
+    
+    match /users/{userId} {
+      // Anyone authenticated can read their own profile
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Users can create their own profile
+      allow create: if isAuthenticated() && isOwner(userId);
+      
+      // Users can update their own profile
+      allow update: if isAuthenticated() && isOwner(userId);
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // USER PROGRESS COLLECTION
+    // ==========================================
+    
+    match /userProgress/{userId} {
+      // Users can read their own progress
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Users can create/update their own progress
+      allow create, update: if isAuthenticated() && isOwner(userId);
+      
+      // No deletion allowed (preserve data)
+      allow delete: if false;
+    }
+    
+    // ==========================================
+    // BOOKMARKS COLLECTION
+    // ==========================================
+    
+    match /bookmarks/{userId} {
+      // Users can read their own bookmarks
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Users can create/update/delete their own bookmarks
+      allow create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // ==========================================
+    // TEST ATTEMPTS COLLECTION
+    // ==========================================
+    
+    match /testAttempts/{attemptId} {
+      // Users can read their own attempts
+      allow read: if isAuthenticated() && 
+                    resource.data.userId == request.auth.uid;
+      
+      // Users can create attempts for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own in-progress attempts
+      allow update: if isAuthenticated() && 
+                      resource.data.userId == request.auth.uid;
+      
+      // No deletion (preserve test history)
+      allow delete: if false;
+    }
+    
+    // ==========================================
+    // SUBJECTS COLLECTION (Public Read)
+    // ==========================================
+    
+    match /subjects/{subjectId} {
+      // Anyone can read subjects
+      allow read: if true;
+      
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+      
+      // Chapters subcollection
+      match /chapters/{chapterId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+      }
+    }
+    
+    // ==========================================
+    // QUESTIONS COLLECTION (Public Read)
+    // ==========================================
+    
+    match /questions/{questionId} {
+      // Anyone authenticated can read questions
+      allow read: if isAuthenticated();
+      
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // TESTS COLLECTION (Public Read)
+    // ==========================================
+    
+    match /tests/{testId} {
+      // Anyone authenticated can read tests
+      allow read: if isAuthenticated();
+      
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // PYQ COLLECTION (Public Read)
+    // ==========================================
+    
+    match /pyq/{pyqId} {
+      // Anyone authenticated can read PYQ
+      allow read: if isAuthenticated();
+      
+      // Only admins can write
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // LEADERBOARD COLLECTION
+    // ==========================================
+    
+    match /leaderboard/{entryId} {
+      // Anyone authenticated can read leaderboard
+      allow read: if isAuthenticated();
+      
+      // System writes only (via Cloud Functions)
+      allow create, update, delete: if false;
+    }
+    
+    // ==========================================
+    // SUBSCRIPTIONS COLLECTION
+    // ==========================================
+    
+    match /subscriptions/{userId} {
+      // Users can read their own subscription
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Only system can write (via Cloud Functions)
+      allow create, update, delete: if false;
+    }
+    
+    // ==========================================
+    // ADMIN COLLECTION
+    // ==========================================
+    
+    match /admin/{docId} {
+      // Only admins can read/write
+      allow read, write: if isAdmin();
+    }
+    
+    // ==========================================
+    // ANALYTICS COLLECTION
+    // ==========================================
+    
+    match /analytics/{docId} {
+      // Only admins can read
+      allow read: if isAdmin();
+      
+      // System writes only
+      allow create, update: if false;
+      allow delete: if false;
+    }
+    
+    // ==========================================
+    // DEFAULT DENY
+    // ==========================================
+    
+    // Deny access to any other collection
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

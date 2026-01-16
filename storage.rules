@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return request.auth.token.admin == true;
+    }
+    
+    // Check file size (max 10MB)
+    function isValidSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Check if image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Check if PDF
+    function isPDF() {
+      return request.resource.contentType == 'application/pdf';
+    }
+    
+    // ==========================================
+    // USER PROFILE IMAGES
+    // ==========================================
+    
+    match /users/{userId}/profile/{fileName} {
+      // Anyone can read profile images
+      allow read: if true;
+      
+      // Users can upload their own profile image
+      allow write: if isAuthenticated() && 
+                     isOwner(userId) && 
+                     isValidSize() && 
+                     isImage();
+    }
+    
+    // ==========================================
+    // PDF RESOURCES (Public Read)
+    // ==========================================
+    
+    match /resources/{subjectId}/{fileName} {
+      // Anyone authenticated can read resources
+      allow read: if isAuthenticated();
+      
+      // Only admins can upload
+      allow write: if isAdmin() && isPDF();
+    }
+    
+    // ==========================================
+    // QUESTION IMAGES
+    // ==========================================
+    
+    match /questions/{questionId}/{fileName} {
+      // Anyone authenticated can read
+      allow read: if isAuthenticated();
+      
+      // Only admins can upload
+      allow write: if isAdmin() && isImage();
+    }
+    
+    // ==========================================
+    // TEST IMAGES
+    // ==========================================
+    
+    match /tests/{testId}/{fileName} {
+      // Anyone authenticated can read
+      allow read: if isAuthenticated();
+      
+      // Only admins can upload
+      allow write: if isAdmin() && isImage();
+    }
+    
+    // ==========================================
+    // ADMIN UPLOADS
+    // ==========================================
+    
+    match /admin/{path=**} {
+      // Only admins can read/write
+      allow read, write: if isAdmin();
+    }
+    
+    // ==========================================
+    // DEFAULT DENY
+    // ==========================================
+    
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -60,26 +60,16 @@ function MobileNav({ className }: MobileNavProps) {
                         const isActive = isActiveLink(link.href);
                         const Icon = link.icon;
 
-                        // If requires auth and not authenticated, show login icon
-                        if (link.requiresAuth && !isAuthenticated) {
-                            return (
-                                <Link
-                                    key={link.href}
-                                    href="/login"
-                                    className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors"
-                                >
-                                    <LogIn className="h-5 w-5 text-gray-400" />
-                                    <span className="text-[10px] font-medium text-gray-400">
-                                        Login
-                                    </span>
-                                </Link>
-                            );
-                        }
+                        // For protected routes when not authenticated, 
+                        // show original icon but link to login
+                        const targetHref = (link.requiresAuth && !isAuthenticated)
+                            ? '/login'
+                            : link.href;
 
                         return (
                             <Link
                                 key={link.href}
-                                href={link.href}
+                                href={targetHref}
                                 onClick={(e) => handleClick(link, e)}
                                 className={cn(
                                     'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg',

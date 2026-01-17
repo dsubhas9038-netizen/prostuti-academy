@@ -1,12 +1,379 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Plus, Edit2, Trash2, Search, Filter, BookOpen, MoreVertical } from 'lucide-react';
+import { AdminLayout } from '@/components/admin';
+import { Card, CardBody, CardHeader, Button, Input, Badge, Modal } from '@/components/ui';
+import { sampleSubjects } from '@/data/sampleSubjects';
+
+interface Subject {
+    id: string;
+    name: string;
+    nameBn: string;
+    icon: string;
+    color: string;
+    stream: string;
+    semesters: number[];
+    totalChapters: number;
+    totalQuestions: number;
+    order: number;
+    isActive: boolean;
+}
+
 export default function AdminSubjectsPage() {
+    const [subjects, setSubjects] = useState<Subject[]>(sampleSubjects);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStream, setFilterStream] = useState<string>('all');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+    const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        name: '',
+        nameBn: '',
+        icon: '📚',
+        color: '#3B82F6',
+        stream: 'arts',
+        isActive: true
+    });
+
+    // Filter subjects
+    const filteredSubjects = subjects.filter(subject => {
+        const matchesSearch = subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            subject.nameBn.includes(searchQuery);
+        const matchesStream = filterStream === 'all' || subject.stream === filterStream;
+        return matchesSearch && matchesStream;
+    });
+
+    // Handle add subject
+    const handleAddSubject = () => {
+        const newSubject: Subject = {
+            id: `subject-${Date.now()}`,
+            name: formData.name,
+            nameBn: formData.nameBn,
+            icon: formData.icon,
+            color: formData.color,
+            stream: formData.stream,
+            semesters: [1, 2, 3, 4],
+            totalChapters: 0,
+            totalQuestions: 0,
+            order: subjects.length + 1,
+            isActive: formData.isActive
+        };
+        setSubjects([...subjects, newSubject]);
+        setIsAddModalOpen(false);
+        resetForm();
+        alert('Subject added successfully!');
+    };
+
+    // Handle edit subject
+    const handleEditSubject = () => {
+        if (!editingSubject) return;
+        setSubjects(subjects.map(s =>
+            s.id === editingSubject.id ? { ...s, ...formData } : s
+        ));
+        setEditingSubject(null);
+        resetForm();
+        alert('Subject updated successfully!');
+    };
+
+    // Handle delete subject
+    const handleDeleteSubject = () => {
+        if (!deleteSubject) return;
+        setSubjects(subjects.filter(s => s.id !== deleteSubject.id));
+        setDeleteSubject(null);
+        alert('Subject deleted successfully!');
+    };
+
+    // Reset form
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            nameBn: '',
+            icon: '📚',
+            color: '#3B82F6',
+            stream: 'arts',
+            isActive: true
+        });
+    };
+
+    // Open edit modal
+    const openEditModal = (subject: Subject) => {
+        setFormData({
+            name: subject.name,
+            nameBn: subject.nameBn,
+            icon: subject.icon,
+            color: subject.color,
+            stream: subject.stream,
+            isActive: subject.isActive
+        });
+        setEditingSubject(subject);
+    };
+
+    const icons = ['📕', '📗', '📘', '📙', '📓', '📔', '📒', '📚', '📖', '🎓'];
+    const colors = ['#DC2626', '#059669', '#2563EB', '#D97706', '#7C3AED', '#DB2777', '#0891B2', '#CA8A04'];
+
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">
-                📚 Manage Subjects
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-                Admin panel for managing subjects - Coming soon
-            </p>
-        </div>
+        <AdminLayout title="Manage Subjects" titleBn="বিষয় পরিচালনা">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        All Subjects ({filteredSubjects.length})
+                    </h2>
+                    <p className="text-sm text-gray-500">Manage subjects for your platform</p>
+                </div>
+                <Button
+                    onClick={() => setIsAddModalOpen(true)}
+                    leftIcon={<Plus className="h-4 w-4" />}
+                >
+                    Add Subject
+                </Button>
+            </div>
+
+            {/* Filters */}
+            <Card className="mb-6">
+                <CardBody>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search subjects..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <select
+                                value={filterStream}
+                                onChange={(e) => setFilterStream(e.target.value)}
+                                className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            >
+                                <option value="all">All Streams</option>
+                                <option value="arts">Arts</option>
+                                <option value="science">Science</option>
+                                <option value="commerce">Commerce</option>
+                            </select>
+                        </div>
+                    </div>
+                </CardBody>
+            </Card>
+
+            {/* Subjects Grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredSubjects.map((subject) => (
+                    <Card key={subject.id} className="group hover:shadow-lg transition-shadow">
+                        <CardBody>
+                            <div className="flex items-start justify-between mb-4">
+                                <div
+                                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                                    style={{ backgroundColor: `${subject.color}20` }}
+                                >
+                                    {subject.icon}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Badge
+                                        size="sm"
+                                        variant={subject.isActive ? 'success' : 'default'}
+                                    >
+                                        {subject.isActive ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                    <button
+                                        onClick={() => openEditModal(subject)}
+                                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                    >
+                                        <Edit2 className="h-4 w-4 text-gray-500" />
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteSubject(subject)}
+                                        className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                    >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                {subject.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 font-bengali mb-4">
+                                {subject.nameBn}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="flex items-center gap-2 text-gray-500">
+                                    <BookOpen className="h-4 w-4" />
+                                    <span>{subject.totalChapters} Chapters</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-500">
+                                    <span>📝</span>
+                                    <span>{subject.totalQuestions} Questions</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <Badge size="sm" style={{ backgroundColor: `${subject.color}20`, color: subject.color }}>
+                                    {subject.stream.charAt(0).toUpperCase() + subject.stream.slice(1)}
+                                </Badge>
+                            </div>
+                        </CardBody>
+                    </Card>
+                ))}
+            </div>
+
+            {/* Add/Edit Modal */}
+            {(isAddModalOpen || editingSubject) && (
+                <Modal
+                    isOpen={true}
+                    onClose={() => {
+                        setIsAddModalOpen(false);
+                        setEditingSubject(null);
+                        resetForm();
+                    }}
+                    title={editingSubject ? 'Edit Subject' : 'Add New Subject'}
+                >
+                    <div className="space-y-4">
+                        <Input
+                            label="Subject Name"
+                            placeholder="e.g., Bengali"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                        />
+                        <Input
+                            label="Name (Bengali)"
+                            placeholder="e.g., বাংলা"
+                            value={formData.nameBn}
+                            onChange={(e) => setFormData({ ...formData, nameBn: e.target.value })}
+                        />
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Icon
+                            </label>
+                            <div className="flex gap-2 flex-wrap">
+                                {icons.map((icon) => (
+                                    <button
+                                        key={icon}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, icon })}
+                                        className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl border-2 transition-all ${formData.icon === icon
+                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        {icon}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Color
+                            </label>
+                            <div className="flex gap-2 flex-wrap">
+                                {colors.map((color) => (
+                                    <button
+                                        key={color}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, color })}
+                                        className={`w-8 h-8 rounded-full border-2 transition-all ${formData.color === color
+                                                ? 'border-gray-900 dark:border-white scale-110'
+                                                : 'border-transparent hover:scale-105'
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Stream
+                            </label>
+                            <select
+                                value={formData.stream}
+                                onChange={(e) => setFormData({ ...formData, stream: e.target.value })}
+                                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                            >
+                                <option value="arts">Arts</option>
+                                <option value="science">Science</option>
+                                <option value="commerce">Commerce</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="isActive"
+                                checked={formData.isActive}
+                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                className="rounded border-gray-300"
+                            />
+                            <label htmlFor="isActive" className="text-sm text-gray-700 dark:text-gray-300">
+                                Subject is active
+                            </label>
+                        </div>
+
+                        <div className="flex gap-3 pt-4">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => {
+                                    setIsAddModalOpen(false);
+                                    setEditingSubject(null);
+                                    resetForm();
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1"
+                                onClick={editingSubject ? handleEditSubject : handleAddSubject}
+                            >
+                                {editingSubject ? 'Save Changes' : 'Add Subject'}
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteSubject && (
+                <Modal
+                    isOpen={true}
+                    onClose={() => setDeleteSubject(null)}
+                    title="Delete Subject"
+                >
+                    <div className="space-y-4">
+                        <p className="text-gray-600 dark:text-gray-400">
+                            Are you sure you want to delete <strong>{deleteSubject.name}</strong>?
+                            This will also delete all chapters and questions under this subject.
+                        </p>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setDeleteSubject(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="danger"
+                                className="flex-1"
+                                onClick={handleDeleteSubject}
+                            >
+                                Delete Subject
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </AdminLayout>
     );
 }

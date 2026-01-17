@@ -100,7 +100,7 @@ function Header({ className }: HeaderProps) {
                             </nav>
                         </div>
 
-                        {/* Right: Search, Theme, User */}
+                        {/* Right: Search, User, Menu */}
                         <div className="flex items-center gap-2">
                             {/* Desktop Search */}
                             <div className="hidden md:block">
@@ -115,8 +115,10 @@ function Header({ className }: HeaderProps) {
                                 <Search className="h-5 w-5 text-gray-500" />
                             </button>
 
-                            {/* Theme Toggle */}
-                            <ThemeToggle variant="dropdown" />
+                            {/* Theme Toggle - Desktop only */}
+                            <div className="hidden lg:block">
+                                <ThemeToggle variant="dropdown" />
+                            </div>
 
                             {/* User Menu */}
                             <UserMenu />
@@ -204,6 +206,17 @@ function Header({ className }: HeaderProps) {
                         >
                             Contact
                         </Link>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="my-6 border-t border-gray-200 dark:border-gray-800" />
+
+                    {/* Night Mode Toggle */}
+                    <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800">
+                        <span className="text-base font-medium text-gray-900 dark:text-white">
+                            Night Mode
+                        </span>
+                        <ThemeToggle variant="icon" />
                     </div>
                 </nav>
             </div>

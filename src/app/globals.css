@@ -3,6 +3,9 @@
 
 @import "tailwindcss";
 
+/* Tailwind v4: Enable dark mode with 'dark' class */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Custom CSS Variables for Theming */
 :root {
   /* Light Theme Colors */

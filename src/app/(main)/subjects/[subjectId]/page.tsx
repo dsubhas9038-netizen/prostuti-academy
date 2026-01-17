@@ -29,6 +29,18 @@ export default function SubjectDetailPage() {
         semester: activeSemester,
     });
 
+    // Semester chapters count - MUST be before any conditional returns
+    const semesterCounts = useMemo((): Record<number | 'all', number> => {
+        if (!chapters) return { all: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+        return {
+            all: chapters.length,
+            1: chapters.filter(ch => ch.semester === 1).length,
+            2: chapters.filter(ch => ch.semester === 2).length,
+            3: chapters.filter(ch => ch.semester === 3).length,
+            4: chapters.filter(ch => ch.semester === 4).length,
+        };
+    }, [chapters]);
+
     // Loading state
     if (subjectLoading) {
         return (
@@ -74,18 +86,6 @@ export default function SubjectDetailPage() {
     const completedChapters = chapters
         .filter((_, i) => i < 2)
         .map(ch => ch.id);
-
-    // Semester chapters count
-    const semesterCounts = useMemo((): Record<number | 'all', number> => {
-        const allChapters = chapters;
-        return {
-            all: allChapters.length,
-            1: allChapters.filter(ch => ch.semester === 1).length,
-            2: allChapters.filter(ch => ch.semester === 2).length,
-            3: allChapters.filter(ch => ch.semester === 3).length,
-            4: allChapters.filter(ch => ch.semester === 4).length,
-        };
-    }, [chapters]);
 
     return (
         <MainLayout>

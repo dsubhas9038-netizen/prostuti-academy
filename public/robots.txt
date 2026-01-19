@@ -6,7 +6,7 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://prostutiacademy.web.app/sitemap.xml
+Sitemap: https://prostuti-academy.vercel.app/sitemap.xml
 
 # Crawl-delay for politeness
 Crawl-delay: 1

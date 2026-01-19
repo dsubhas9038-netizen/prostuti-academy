@@ -9,16 +9,16 @@ import { Button } from '@/components/ui';
 const upcomingExams = [
     {
         id: 1,
-        name: 'HS Semester 2 Exam 2025',
-        nameBn: 'উচ্চমাধ্যমিক সেমিস্টার ২ পরীক্ষা ২০২৫',
-        date: new Date('2025-04-15'),
+        name: 'HS Semester 2 Exam 2026',
+        nameBn: 'উচ্চমাধ্যমিক সেমিস্টার ২ পরীক্ষা ২০২৬',
+        date: new Date('2026-04-15'),
         type: 'semester',
     },
     {
         id: 2,
-        name: 'HS Final Exam 2025',
-        nameBn: 'উচ্চমাধ্যমিক ফাইনাল পরীক্ষা ২০২৫',
-        date: new Date('2025-03-01'),
+        name: 'HS Final Exam 2026',
+        nameBn: 'উচ্চমাধ্যমিক ফাইনাল পরীক্ষা ২০২৬',
+        date: new Date('2026-03-01'),
         type: 'final',
     },
 ];

@@ -1,110 +1,138 @@
-import Link from 'next/link';
-import { Card, Badge, Button } from '@/components/ui';
-import { Clock, Users, Star } from 'lucide-react';
+'use client';
+
+import React, { useState } from 'react';
+import { PenTool, Filter, Loader2, Search } from 'lucide-react';
+import { MainLayout } from '@/components/layout';
+import { TestList } from '@/components/tests';
+import { Breadcrumb, Button, Card, CardBody, Input } from '@/components/ui';
+import { useTests } from '@/hooks';
+import { PageLoading } from '@/components/shared';
 
 export default function MockTestsPage() {
-    const tests = [
-        {
-            id: 'test1',
-            title: 'Bengali Semester 1 Mock Test',
-            titleBn: 'বাংলা সেমিস্টার ১ মক টেস্ট',
-            duration: 60,
-            questions: 25,
-            marks: 50,
-            difficulty: 'medium',
-            attempts: 150,
-            isFree: true,
-        },
-        {
-            id: 'test2',
-            title: 'History Full Syllabus Test',
-            titleBn: 'ইতিহাস সম্পূর্ণ সিলেবাস টেস্ট',
-            duration: 90,
-            questions: 40,
-            marks: 80,
-            difficulty: 'hard',
-            attempts: 89,
-            isFree: true,
-        },
-        {
-            id: 'test3',
-            title: 'English Grammar Quick Test',
-            titleBn: 'ইংরেজি গ্রামার কুইক টেস্ট',
-            duration: 30,
-            questions: 15,
-            marks: 30,
-            difficulty: 'easy',
-            attempts: 234,
-            isFree: true,
-        },
+    const [activeSubject, setActiveSubject] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Use the hook to get proper data
+    const { tests, loading } = useTests();
+
+    // Breadcrumb items
+    const breadcrumbItems = [
+        { label: 'Home', labelBn: 'হোম', href: '/' },
+        { label: 'Mock Tests', labelBn: 'মক টেস্ট' },
+    ];
+
+    // Filter logic
+    const filteredTests = tests.filter(test => {
+        const matchesSubject = activeSubject === 'all' || test.subjectId === activeSubject;
+        const matchesSearch = test.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            test.titleBn?.includes(searchQuery);
+        return matchesSubject && matchesSearch;
+    });
+
+    const subjects = [
+        { id: 'all', label: 'All Tests' },
+        { id: 'bengali', label: 'Bengali' },
+        { id: 'english', label: 'English' },
+        { id: 'history', label: 'History' },
+        { id: 'geography', label: 'Geography' },
+        { id: 'philosophy', label: 'Philosophy' },
     ];
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
-                📝 Mock Tests
-            </h1>
-            <p className="mb-8 text-gray-600 dark:text-gray-400">
-                Real exam এর মতো practice করো এবং নিজেকে যাচাই করো
-            </p>
+        <MainLayout>
+            <div className="container mx-auto px-4 py-8">
+                {/* Breadcrumb */}
+                <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
-            {/* Filter Buttons */}
-            <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-                <Button variant="primary" size="sm">All Tests</Button>
-                <Button variant="outline" size="sm">Bengali</Button>
-                <Button variant="outline" size="sm">English</Button>
-                <Button variant="outline" size="sm">History</Button>
-                <Button variant="outline" size="sm">Geography</Button>
-            </div>
+                {/* Page Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <PenTool className="h-8 w-8 text-blue-600" />
+                            Mock Tests
+                        </h1>
+                        <p className="text-gray-500 mt-1 text-lg">
+                            Real exam এর মতো practice করো এবং নিজেকে যাচাই করো
+                        </p>
+                    </div>
+                </div>
 
-            {/* Tests Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tests.map((test) => (
-                    <Card key={test.id} className="card-hover p-6">
-                        <div className="mb-4 flex items-start justify-between">
-                            <Badge variant={test.isFree ? 'success' : 'warning'}>
-                                {test.isFree ? 'FREE' : 'Premium'}
-                            </Badge>
-                            <Badge
-                                variant={
-                                    test.difficulty === 'easy'
-                                        ? 'success'
-                                        : test.difficulty === 'medium'
-                                            ? 'warning'
-                                            : 'danger'
-                                }
-                            >
-                                {test.difficulty}
-                            </Badge>
+                {/* Filters & Search */}
+                <Card className="mb-8">
+                    <CardBody className="py-4">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            {/* Subject Filters */}
+                            <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
+                                <Filter className="h-5 w-5 text-gray-400 min-w-5" />
+                                <div className="flex gap-2">
+                                    {subjects.map((subject) => (
+                                        <Button
+                                            key={subject.id}
+                                            variant={activeSubject === subject.id ? 'primary' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setActiveSubject(subject.id)}
+                                            className="whitespace-nowrap"
+                                        >
+                                            {subject.label}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Search */}
+                            <div className="relative w-full lg:w-72">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Search tests..."
+                                    className="pl-9"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
                         </div>
+                    </CardBody>
+                </Card>
 
-                        <h3 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
-                            {test.titleBn}
+                {/* Stats */}
+                <div className="mb-6 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">
+                        Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredTests.length}</span> tests
+                    </p>
+                </div>
+
+                {/* Test List */}
+                {loading ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <Card key={i} className="h-64 animate-pulse bg-gray-100 dark:bg-gray-800" />
+                        ))}
+                    </div>
+                ) : filteredTests.length > 0 ? (
+                    <TestList tests={filteredTests} />
+                ) : (
+                    <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
+                            <PenTool className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                            No tests found
                         </h3>
-                        <p className="mb-4 text-sm text-gray-500">{test.title}</p>
-
-                        <div className="mb-4 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                {test.duration} min
-                            </span>
-                            <span>{test.questions} প্রশ্ন</span>
-                            <span>{test.marks} marks</span>
-                        </div>
-
-                        <div className="mb-4 flex items-center gap-1 text-sm text-gray-500">
-                            <Users className="h-4 w-4" />
-                            {test.attempts} জন দিয়েছে
-                        </div>
-
-                        <Link href={`/mock-tests/${test.id}`}>
-                            <Button variant="primary" className="w-full">
-                                টেস্ট শুরু করো
-                            </Button>
-                        </Link>
-                    </Card>
-                ))}
+                        <p className="text-gray-500">
+                            Try adjusting your filters or search query
+                        </p>
+                        <Button
+                            variant="primary"
+                            className="mt-4"
+                            onClick={() => {
+                                setActiveSubject('all');
+                                setSearchQuery('');
+                            }}
+                        >
+                            Clear Filters
+                        </Button>
+                    </div>
+                )}
             </div>
-        </div>
+        </MainLayout>
     );
 }

@@ -19,6 +19,7 @@ export { default as useQuestions, useQuestion } from './useQuestions';
 export { default as useSubjects, useSubject } from './useSubjects';
 export { default as useChapters, useChapter } from './useChapters';
 export { default as useTest } from './useTest';
+export { default as useTests } from './useTests';
 export { default as useLocalStorage } from './useLocalStorage';
 
 

@@ -22,3 +22,4 @@ export { default as ScoreAnalysis } from './ScoreAnalysis';
 
 // Card
 export { default as TestCard } from './TestCard';
+export { default as TestList } from './TestList';

@@ -1,95 +1,126 @@
-import { Card, Badge, ProgressBar } from '@/components/ui';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+'use client';
+
+import React, { useState } from 'react';
+import {
+    BarChart2,
+    TrendingUp,
+    BookOpen,
+    Info
+} from 'lucide-react';
+import { MainLayout } from '@/components/layout';
+import {
+    PYQStatsOverview,
+    SubjectPYQCard,
+    TrendPrediction
+} from '@/components/pyq';
+import { Breadcrumb, Button, Card, CardBody } from '@/components/ui';
+import { usePYQ } from '@/hooks';
+import { PageLoading } from '@/components/shared';
 
 export default function PYQAnalysisPage() {
-    const subjectAnalysis = [
-        {
-            subject: 'বাংলা',
-            icon: '📕',
-            chapters: [
-                { name: 'পথের দাবী', avgMarks: 8, trend: 'up', years: [2023, 2022, 2021] },
-                { name: 'অভিষেক', avgMarks: 6, trend: 'stable', years: [2023, 2021] },
-                { name: 'সিন্ধু তীরে', avgMarks: 5, trend: 'down', years: [2022, 2020] },
-            ],
-        },
-        {
-            subject: 'ইতিহাস',
-            icon: '📘',
-            chapters: [
-                { name: 'জাতীয়তাবাদ', avgMarks: 10, trend: 'up', years: [2023, 2022, 2021, 2020] },
-                { name: 'সত্তর দশক', avgMarks: 7, trend: 'stable', years: [2023, 2022] },
-                { name: 'শীতল যুদ্ধ', avgMarks: 6, trend: 'up', years: [2023, 2021] },
-            ],
-        },
+    const [activeTab, setActiveTab] = useState<'overview' | 'trends'>('overview');
+
+    // Data Hook
+    const {
+        allSubjectsAnalysis,
+        summary,
+        trendPredictions,
+        loading
+    } = usePYQ();
+
+    // Breadcrumb
+    const breadcrumbItems = [
+        { label: 'Home', labelBn: 'হোম', href: '/' },
+        { label: 'PYQ Analysis', labelBn: 'PYQ বিশ্লেষণ' },
     ];
 
-    const getTrendIcon = (trend: string) => {
-        switch (trend) {
-            case 'up':
-                return <TrendingUp className="h-4 w-4 text-green-600" />;
-            case 'down':
-                return <TrendingDown className="h-4 w-4 text-red-600" />;
-            default:
-                return <Minus className="h-4 w-4 text-gray-400" />;
-        }
-    };
+    if (loading) {
+        return (
+            <MainLayout>
+                <PageLoading message="Analyzing question patterns..." />
+            </MainLayout>
+        );
+    }
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
-                📊 PYQ Analysis
-            </h1>
-            <p className="mb-8 text-gray-600 dark:text-gray-400">
-                গত ১০ বছরের প্রশ্ন pattern বিশ্লেষণ - কোন chapter থেকে কত marks আসে
-            </p>
+        <MainLayout>
+            <div className="container mx-auto px-4 py-8">
+                {/* Breadcrumb */}
+                <Breadcrumb items={breadcrumbItems} className="mb-6" />
 
-            {/* Important Notice */}
-            <Card className="mb-8 border-l-4 border-l-yellow-500 bg-yellow-50 p-4 dark:bg-yellow-900/20">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    💡 <strong>Pro Tip:</strong> যে chapter গুলোতে ⬆️ আছে সেগুলো এই বছর আসার সম্ভাবনা বেশি!
-                </p>
-            </Card>
+                {/* Page Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <BarChart2 className="h-8 w-8 text-blue-600" />
+                            PYQ Analysis
+                        </h1>
+                        <p className="text-gray-500 mt-1 text-lg">
+                            গত ৫ বছরের প্রশ্ন pattern বিশ্লেষণ ও সাজেশন
+                        </p>
+                    </div>
 
-            {/* Subject Analysis */}
-            <div className="space-y-8">
-                {subjectAnalysis.map((subject) => (
-                    <div key={subject.subject}>
-                        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-                            <span>{subject.icon}</span>
-                            {subject.subject}
-                        </h2>
+                    {/* Tabs */}
+                    <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-lg self-start">
+                        <Button
+                            variant={activeTab === 'overview' ? 'primary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setActiveTab('overview')}
+                            leftIcon={<BookOpen className="h-4 w-4" />}
+                        >
+                            Overview
+                        </Button>
+                        <Button
+                            variant={activeTab === 'trends' ? 'primary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setActiveTab('trends')}
+                            leftIcon={<TrendingUp className="h-4 w-4" />}
+                        >
+                            Trends & Hot Topics
+                        </Button>
+                    </div>
+                </div>
 
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {subject.chapters.map((chapter, index) => (
-                                <Card key={index} className="p-4">
-                                    <div className="mb-3 flex items-start justify-between">
-                                        <h3 className="font-medium text-gray-900 dark:text-white">
-                                            {chapter.name}
-                                        </h3>
-                                        {getTrendIcon(chapter.trend)}
-                                    </div>
+                {/* Stats Overview */}
+                <div className="mb-8">
+                    <PYQStatsOverview summary={summary} />
+                </div>
 
-                                    <div className="mb-3">
-                                        <div className="mb-1 flex justify-between text-sm">
-                                            <span className="text-gray-600 dark:text-gray-400">Avg. Marks</span>
-                                            <span className="font-medium">{chapter.avgMarks}</span>
-                                        </div>
-                                        <ProgressBar value={chapter.avgMarks * 10} />
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-1">
-                                        {chapter.years.map((year) => (
-                                            <Badge key={year} variant="default" className="text-xs">
-                                                {year}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </Card>
+                {/* Tab Content */}
+                {activeTab === 'overview' ? (
+                    <div className="space-y-6">
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {allSubjectsAnalysis.map((subject) => (
+                                <SubjectPYQCard
+                                    key={subject.subjectId}
+                                    subject={subject}
+                                />
                             ))}
                         </div>
                     </div>
-                ))}
+                ) : (
+                    <div className="space-y-6">
+                        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
+                            <CardBody className="flex items-start gap-4">
+                                <Info className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                                        Understanding Trends
+                                    </h3>
+                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                        Based on frequency analysis of last 5 years (2019-2023).
+                                        Topics marked 'Very High' have &gt;80% probability of appearing this year.
+                                    </p>
+                                </div>
+                            </CardBody>
+                        </Card>
+
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            <TrendPrediction predictions={trendPredictions} />
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </MainLayout>
     );
 }

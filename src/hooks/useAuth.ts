@@ -13,7 +13,7 @@ export function useAuth() {
         ...auth,
         errorMessage,
         isAuthenticated: !!auth.firebaseUser,
-        isAdmin: auth.userData?.role === 'admin',
+        isAdmin: ['admin', 'super_admin'].includes(auth.userData?.role || ''),
         userName: auth.userData?.displayName || auth.firebaseUser?.displayName || 'Student',
         userPhoto: auth.userData?.photoURL || auth.firebaseUser?.photoURL || null,
         userRole: auth.userData?.role || 'user',

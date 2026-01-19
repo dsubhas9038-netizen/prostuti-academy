@@ -81,7 +81,8 @@ function TestManager({
 
     // Filter tests
     const filteredTests = tests.filter(t => {
-        const matchesSearch = t.titleBn.toLowerCase().includes(searchQuery.toLowerCase());
+        const titleBn = t.titleBn || '';
+        const matchesSearch = titleBn.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
         return matchesSearch && matchesStatus;
     });

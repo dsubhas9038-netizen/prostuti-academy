@@ -1,36 +1,28 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Search, Filter, BookOpen, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Plus, Edit2, Trash2, Search, BookOpen } from 'lucide-react';
 import { AdminLayout } from '@/components/admin';
 import { Card, CardBody, CardHeader, Button, Input, Badge, Modal } from '@/components/ui';
-import { sampleChapters } from '@/data/sampleChapters';
-import { sampleSubjects } from '@/data/sampleSubjects';
-
-interface Chapter {
-    id: string;
-    subjectId: string;
-    semester: number;
-    chapterNumber: number;
-    title: string;
-    titleBn: string;
-    author: string | null;
-    authorBn: string | null;
-    description: string;
-    descriptionBn: string;
-    totalQuestions: number;
-    order: number;
-    isActive: boolean;
-}
+import { PageLoading } from '@/components/shared';
+// Import services
+import { getAllChapters, addChapter, updateChapter, deleteChapter, getSubjects } from '@/lib/admin';
+import toast from 'react-hot-toast';
 
 export default function AdminChaptersPage() {
-    const [chapters, setChapters] = useState<Chapter[]>(sampleChapters as Chapter[]);
+    const [chapters, setChapters] = useState<any[]>([]);
+    const [subjects, setSubjects] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [filterSubject, setFilterSubject] = useState<string>('all');
     const [filterSemester, setFilterSemester] = useState<string>('all');
+
+    // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [editingChapter, setEditingChapter] = useState<Chapter | null>(null);
-    const [deleteChapter, setDeleteChapter] = useState<Chapter | null>(null);
+    const [editingChapter, setEditingChapter] = useState<any | null>(null);
+    const [deleteChapterData, setDeleteChapterData] = useState<any | null>(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -46,89 +38,114 @@ export default function AdminChaptersPage() {
         isActive: true
     });
 
+    // Load Data
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [chaptersData, subjectsData] = await Promise.all([
+                getAllChapters(),
+                getSubjects()
+            ]);
+            setChapters(chaptersData);
+            setSubjects(subjectsData);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
     // Filter chapters
     const filteredChapters = useMemo(() => {
         return chapters.filter(chapter => {
-            const matchesSearch = chapter.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                chapter.titleBn.includes(searchQuery);
+            const matchesSearch = (chapter.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (chapter.titleBn || '').includes(searchQuery);
             const matchesSubject = filterSubject === 'all' || chapter.subjectId === filterSubject;
-            const matchesSemester = filterSemester === 'all' || chapter.semester.toString() === filterSemester;
+            const matchesSemester = filterSemester === 'all' || chapter.semester?.toString() === filterSemester;
             return matchesSearch && matchesSubject && matchesSemester;
         });
     }, [chapters, searchQuery, filterSubject, filterSemester]);
 
     // Group chapters by subject
     const groupedChapters = useMemo(() => {
-        const groups: { [key: string]: Chapter[] } = {};
+        const groups: { [key: string]: any[] } = {};
         filteredChapters.forEach(chapter => {
-            if (!groups[chapter.subjectId]) {
-                groups[chapter.subjectId] = [];
+            const sId = chapter.subjectId;
+            if (!groups[sId]) {
+                groups[sId] = [];
             }
-            groups[chapter.subjectId].push(chapter);
+            groups[sId].push(chapter);
         });
         return groups;
     }, [filteredChapters]);
 
-    // Get subject info
+    // Get subject info helper
     const getSubjectInfo = (subjectId: string) => {
-        return sampleSubjects.find(s => s.id === subjectId);
+        return subjects.find(s => s.id === subjectId);
     };
 
-    // Handle add chapter
-    const handleAddChapter = () => {
-        const newChapter: Chapter = {
-            id: `chapter-${Date.now()}`,
-            subjectId: formData.subjectId,
-            semester: formData.semester,
-            chapterNumber: formData.chapterNumber,
-            title: formData.title,
-            titleBn: formData.titleBn,
-            author: formData.author || null,
-            authorBn: formData.authorBn || null,
-            description: formData.description,
-            descriptionBn: formData.descriptionBn,
-            totalQuestions: 0,
-            order: chapters.filter(c => c.subjectId === formData.subjectId).length + 1,
-            isActive: formData.isActive
-        };
-        setChapters([...chapters, newChapter]);
-        setIsAddModalOpen(false);
-        resetForm();
-        alert('Chapter added successfully!');
+    // Handle Add
+    const handleAddChapter = async () => {
+        try {
+            setActionLoading(true);
+            await addChapter({
+                ...formData,
+                totalQuestions: 0,
+                order: chapters.filter(c => c.subjectId === formData.subjectId).length + 1
+            });
+            await loadData();
+            setIsAddModalOpen(false);
+            resetForm();
+            toast.success('Chapter added successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to add chapter');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
-    // Handle edit chapter
-    const handleEditChapter = () => {
+    // Handle Edit
+    const handleEditChapter = async () => {
         if (!editingChapter) return;
-        setChapters(chapters.map(c =>
-            c.id === editingChapter.id ? {
-                ...c,
-                subjectId: formData.subjectId,
-                semester: formData.semester,
-                chapterNumber: formData.chapterNumber,
-                title: formData.title,
-                titleBn: formData.titleBn,
-                author: formData.author || null,
-                authorBn: formData.authorBn || null,
-                description: formData.description,
-                descriptionBn: formData.descriptionBn,
-                isActive: formData.isActive
-            } : c
-        ));
-        setEditingChapter(null);
-        resetForm();
-        alert('Chapter updated successfully!');
+        try {
+            setActionLoading(true);
+            await updateChapter(editingChapter.id, formData);
+            await loadData();
+            setEditingChapter(null);
+            resetForm();
+            toast.success('Chapter updated successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update chapter');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
-    // Handle delete chapter
-    const handleDeleteChapter = () => {
-        if (!deleteChapter) return;
-        setChapters(chapters.filter(c => c.id !== deleteChapter.id));
-        setDeleteChapter(null);
-        alert('Chapter deleted successfully!');
+    // Handle Delete
+    const handleDeleteChapter = async () => {
+        if (!deleteChapterData) return;
+        try {
+            setActionLoading(true);
+            await deleteChapter(deleteChapterData.id);
+            await loadData();
+            setDeleteChapterData(null);
+            toast.success('Chapter deleted successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to delete chapter');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
-    // Reset form
+    // Helper functions
     const resetForm = () => {
         setFormData({
             subjectId: '',
@@ -144,8 +161,7 @@ export default function AdminChaptersPage() {
         });
     };
 
-    // Open edit modal
-    const openEditModal = (chapter: Chapter) => {
+    const openEditModal = (chapter: any) => {
         setFormData({
             subjectId: chapter.subjectId,
             semester: chapter.semester,
@@ -160,6 +176,14 @@ export default function AdminChaptersPage() {
         });
         setEditingChapter(chapter);
     };
+
+    if (loading) {
+        return (
+            <AdminLayout title="Manage Chapters" titleBn="অধ্যায় পরিচালনা">
+                <PageLoading message="Loading chapters..." />
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout title="Manage Chapters" titleBn="অধ্যায় পরিচালনা">
@@ -201,7 +225,7 @@ export default function AdminChaptersPage() {
                                 className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             >
                                 <option value="all">All Subjects</option>
-                                {sampleSubjects.map(subject => (
+                                {subjects.map(subject => (
                                     <option key={subject.id} value={subject.id}>
                                         {subject.icon} {subject.name}
                                     </option>
@@ -227,22 +251,20 @@ export default function AdminChaptersPage() {
             <div className="space-y-6">
                 {Object.entries(groupedChapters).map(([subjectId, subjectChapters]) => {
                     const subject = getSubjectInfo(subjectId);
-                    if (!subject) return null;
+                    if (!subject) return null; // Skip if subject not found (e.g. deleted)
 
                     return (
                         <Card key={subjectId}>
-                            <CardHeader
-                                title={
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl">{subject.icon}</span>
-                                        <span>{subject.name}</span>
-                                        <Badge size="sm">{subjectChapters.length} chapters</Badge>
-                                    </div>
-                                }
-                            />
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{subject.icon}</span>
+                                    <span>{subject.name}</span>
+                                    <Badge size="sm">{subjectChapters.length} chapters</Badge>
+                                </div>
+                            </CardHeader>
                             <CardBody className="p-0">
                                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                                    {subjectChapters.sort((a, b) => a.semester - b.semester || a.order - b.order).map((chapter) => (
+                                    {subjectChapters.sort((a, b) => (a.semester - b.semester) || (a.order - b.order)).map((chapter) => (
                                         <div
                                             key={chapter.id}
                                             className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -278,7 +300,7 @@ export default function AdminChaptersPage() {
                                                     <Edit2 className="h-4 w-4 text-gray-500" />
                                                 </button>
                                                 <button
-                                                    onClick={() => setDeleteChapter(chapter)}
+                                                    onClick={() => setDeleteChapterData(chapter)}
                                                     className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                                                 >
                                                     <Trash2 className="h-4 w-4 text-red-500" />
@@ -332,7 +354,7 @@ export default function AdminChaptersPage() {
                                     required
                                 >
                                     <option value="">Select Subject</option>
-                                    {sampleSubjects.map(subject => (
+                                    {subjects.map(subject => (
                                         <option key={subject.id} value={subject.id}>
                                             {subject.icon} {subject.name}
                                         </option>
@@ -428,12 +450,15 @@ export default function AdminChaptersPage() {
                                     setEditingChapter(null);
                                     resetForm();
                                 }}
+                                disabled={actionLoading}
                             >
                                 Cancel
                             </Button>
                             <Button
                                 className="flex-1"
                                 onClick={editingChapter ? handleEditChapter : handleAddChapter}
+                                isLoading={actionLoading}
+                                disabled={actionLoading}
                             >
                                 {editingChapter ? 'Save Changes' : 'Add Chapter'}
                             </Button>
@@ -443,22 +468,23 @@ export default function AdminChaptersPage() {
             )}
 
             {/* Delete Confirmation Modal */}
-            {deleteChapter && (
+            {deleteChapterData && (
                 <Modal
                     isOpen={true}
-                    onClose={() => setDeleteChapter(null)}
+                    onClose={() => setDeleteChapterData(null)}
                     title="Delete Chapter"
                 >
                     <div className="space-y-4">
                         <p className="text-gray-600 dark:text-gray-400">
-                            Are you sure you want to delete <strong>"{deleteChapter.title}"</strong>?
+                            Are you sure you want to delete <strong>"{deleteChapterData.title}"</strong>?
                             This will also delete all questions under this chapter.
                         </p>
                         <div className="flex gap-3">
                             <Button
                                 variant="outline"
                                 className="flex-1"
-                                onClick={() => setDeleteChapter(null)}
+                                onClick={() => setDeleteChapterData(null)}
+                                disabled={actionLoading}
                             >
                                 Cancel
                             </Button>
@@ -466,6 +492,8 @@ export default function AdminChaptersPage() {
                                 variant="danger"
                                 className="flex-1"
                                 onClick={handleDeleteChapter}
+                                isLoading={actionLoading}
+                                disabled={actionLoading}
                             >
                                 Delete Chapter
                             </Button>

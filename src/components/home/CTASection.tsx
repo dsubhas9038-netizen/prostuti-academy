@@ -20,7 +20,7 @@ function CTASection() {
         <section className="py-16 lg:py-24 relative overflow-hidden">
             {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-500" />
-            <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "url('/grid-pattern.svg')" }} />
 
             {/* Decorative circles */}
             <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />

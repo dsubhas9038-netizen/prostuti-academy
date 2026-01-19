@@ -37,6 +37,7 @@ interface QuestionManagerProps {
     questions?: Question[];
     onAdd?: () => void;
     onEdit?: (id: string) => void;
+    onView?: (id: string) => void;
     onDelete?: (id: string) => void;
     className?: string;
 }
@@ -71,6 +72,7 @@ function QuestionManager({
     questions = sampleQuestions,
     onAdd,
     onEdit,
+    onView,
     onDelete,
     className
 }: QuestionManagerProps) {
@@ -83,8 +85,10 @@ function QuestionManager({
 
     // Filter questions
     const filteredQuestions = questions.filter(q => {
-        const matchesSearch = q.titleBn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            q.title.toLowerCase().includes(searchQuery.toLowerCase());
+        const titleBn = q.titleBn || '';
+        const title = q.title || '';
+        const matchesSearch = titleBn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = filterStatus === 'all' || q.status === filterStatus;
         const matchesType = filterType === 'all' || q.type === filterType;
         return matchesSearch && matchesStatus && matchesType;
@@ -213,7 +217,7 @@ function QuestionManager({
                         </thead>
                         <tbody>
                             {filteredQuestions.map((question) => {
-                                const status = statusConfig[question.status];
+                                const status = statusConfig[question.status] || statusConfig.draft;
                                 const StatusIcon = status.icon;
 
                                 return (
@@ -259,7 +263,10 @@ function QuestionManager({
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                                                <button className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-green-500">
+                                                <button
+                                                    onClick={() => onView?.(question.id)}
+                                                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-green-500"
+                                                >
                                                     <Eye className="h-4 w-4" />
                                                 </button>
                                                 <button

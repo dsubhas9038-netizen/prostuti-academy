@@ -115,7 +115,7 @@ export interface AdminNavItem {
 
 // Admin role config
 export const adminRoleConfig: Record<AdminRole, { label: string; labelBn: string; color: string }> = {
-    super_admin: { label: 'Super Admin', labelBn: 'সুপার অ্যাডমিন', color: '#EF4444' },
+    super_admin: { label: 'Super Admin (Supreme)', labelBn: 'সুপার অ্যাডমিন (সুপ্রিম)', color: '#EF4444' },
     admin: { label: 'Admin', labelBn: 'অ্যাডমিন', color: '#8B5CF6' },
     moderator: { label: 'Moderator', labelBn: 'মডারেটর', color: '#3B82F6' },
     content_manager: { label: 'Content Manager', labelBn: 'কন্টেন্ট ম্যানেজার', color: '#22C55E' },

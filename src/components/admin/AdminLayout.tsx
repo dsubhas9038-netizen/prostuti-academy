@@ -16,7 +16,7 @@ interface AdminLayoutProps {
 
 function AdminLayout({ children, title, titleBn }: AdminLayoutProps) {
     const router = useRouter();
-    const { firebaseUser, isAuthenticated, loading } = useAuth();
+    const { firebaseUser, isAuthenticated, isAdmin, loading } = useAuth();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // Loading state
@@ -28,14 +28,11 @@ function AdminLayout({ children, title, titleBn }: AdminLayoutProps) {
         );
     }
 
-    // Not authenticated
-    if (!isAuthenticated || !firebaseUser) {
+    // Not authenticated or not admin
+    if (!isAuthenticated || !firebaseUser || !isAdmin) {
         router.push('/login?redirect=/admin');
         return null;
     }
-
-    // TODO: Check if user is admin (for now, allow any authenticated user)
-    // In production, verify admin role from Firestore
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900">

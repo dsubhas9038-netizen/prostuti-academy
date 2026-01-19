@@ -164,7 +164,7 @@ export default function NewUserPage() {
                                 <Button
                                     type="submit"
                                     className="w-full"
-                                    loading={loading}
+                                    isLoading={loading}
                                     leftIcon={<Save className="h-4 w-4" />}
                                 >
                                     Create User

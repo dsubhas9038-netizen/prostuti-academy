@@ -16,6 +16,7 @@ export function useAuth() {
         isAdmin: auth.userData?.role === 'admin',
         userName: auth.userData?.displayName || auth.firebaseUser?.displayName || 'Student',
         userPhoto: auth.userData?.photoURL || auth.firebaseUser?.photoURL || null,
+        userRole: auth.userData?.role || 'user',
     };
 }
 
@@ -34,6 +35,7 @@ export function useAuthSafe() {
             isAdmin: false,
             userName: 'Guest',
             userPhoto: null,
+            userRole: 'user',
             signUp: async () => { },
             signIn: async () => { },
             signInGoogle: async () => { },

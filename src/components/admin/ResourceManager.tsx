@@ -7,13 +7,13 @@ import {
     Upload,
     Edit,
     Trash2,
-    Download,
     Eye,
     FileText,
     CheckCircle,
-    Clock
+    Clock,
+    Link as LinkIcon
 } from 'lucide-react';
-import { Card, CardBody, CardHeader, Button, Badge, Modal } from '@/components/ui';
+import { Card, CardBody, CardHeader, Button, Badge, Modal, Input, Select } from '@/components/ui';
 import { formatFileSize } from '@/types/pdf';
 
 interface Resource {
@@ -29,37 +29,16 @@ interface Resource {
     status: 'draft' | 'published' | 'archived';
     downloads: number;
     createdAt: Date;
+    driveLink?: string;
 }
 
 interface ResourceManagerProps {
     resources?: Resource[];
-    onUpload?: () => void;
+    onUpload?: (data: any) => Promise<void>;
     onEdit?: (id: string) => void;
     onDelete?: (id: string) => void;
     className?: string;
 }
-
-// Sample resources
-const sampleResources: Resource[] = [
-    {
-        id: 'r1', title: 'Pather Dabi Notes', titleBn: 'পথের দাবী নোটস',
-        category: 'notes', categoryBn: 'নোটস', subjectId: 'bengali', subjectName: 'Bengali',
-        fileSize: 2540, format: 'pdf', status: 'published', downloads: 890,
-        createdAt: new Date('2024-01-10')
-    },
-    {
-        id: 'r2', title: 'History Model Paper', titleBn: 'ইতিহাস মডেল পেপার',
-        category: 'model-papers', categoryBn: 'মডেল পেপার', subjectId: 'history', subjectName: 'History',
-        fileSize: 1850, format: 'pdf', status: 'published', downloads: 650,
-        createdAt: new Date('2024-01-08')
-    },
-    {
-        id: 'r3', title: 'English Grammar Guide', titleBn: 'ইংরেজি ব্যাকরণ গাইড',
-        category: 'guides', categoryBn: 'গাইড', subjectId: 'english', subjectName: 'English',
-        fileSize: 3200, format: 'pdf', status: 'draft', downloads: 0,
-        createdAt: new Date('2024-01-12')
-    },
-];
 
 const statusConfig = {
     draft: { color: '#F59E0B', icon: Clock, label: 'Draft' },
@@ -68,7 +47,7 @@ const statusConfig = {
 };
 
 function ResourceManager({
-    resources = sampleResources,
+    resources = [],
     onUpload,
     onEdit,
     onDelete,
@@ -79,9 +58,24 @@ function ResourceManager({
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
+    // Add Modal State
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [uploadLoading, setUploadLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        title: '',
+        titleBn: '',
+        category: 'notes',
+        subject: 'bengali',
+        driveLink: '',
+        status: 'published'
+    });
+
     // Filter resources
     const filteredResources = resources.filter(r => {
-        const matchesSearch = r.titleBn.toLowerCase().includes(searchQuery.toLowerCase());
+        const titleBn = r.titleBn || '';
+        const title = r.title || '';
+        const matchesSearch = titleBn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = filterCategory === 'all' || r.category === filterCategory;
         return matchesSearch && matchesCategory;
     });
@@ -97,6 +91,49 @@ function ResourceManager({
         setDeleteId(null);
     };
 
+    const handleUploadSubmit = async () => {
+        if (!onUpload) return;
+        setUploadLoading(true);
+        try {
+            await onUpload({
+                ...formData,
+                categoryBn: getCategoryBn(formData.category),
+                subjectName: getSubjectName(formData.subject),
+                fileSize: 0, // Placeholder
+                format: 'pdf', // Default
+                downloads: 0
+            });
+            setShowAddModal(false);
+            setFormData({
+                title: '',
+                titleBn: '',
+                category: 'notes',
+                subject: 'bengali',
+                driveLink: '',
+                status: 'published'
+            });
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setUploadLoading(false);
+        }
+    };
+
+    const getCategoryBn = (cat: string) => {
+        switch (cat) {
+            case 'notes': return 'নোটস';
+            case 'guides': return 'গাইড';
+            case 'model-papers': return 'মডেল পেপার';
+            case 'previous-papers': return 'বিগত বছরের প্রশ্ন';
+            default: return cat;
+        }
+    };
+
+    const getSubjectName = (sub: string) => {
+        // Simple mapping, ideally fetched from subjects
+        return sub.charAt(0).toUpperCase() + sub.slice(1);
+    };
+
     return (
         <Card className={className}>
             <CardHeader
@@ -104,8 +141,8 @@ function ResourceManager({
                 subtitle="রিসোর্স ব্যবস্থাপনা"
                 icon={<span className="text-xl">📄</span>}
                 action={
-                    <Button onClick={onUpload} leftIcon={<Upload className="h-4 w-4" />}>
-                        Upload PDF
+                    <Button onClick={() => setShowAddModal(true)} leftIcon={<Upload className="h-4 w-4" />}>
+                        Add Resource
                     </Button>
                 }
             />
@@ -140,7 +177,7 @@ function ResourceManager({
                 {/* Resources List */}
                 <div className="space-y-3">
                     {filteredResources.map((resource) => {
-                        const status = statusConfig[resource.status];
+                        const status = statusConfig[resource.status] || statusConfig.draft;
                         const StatusIcon = status.icon;
 
                         return (
@@ -156,7 +193,7 @@ function ResourceManager({
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <h4 className="font-medium text-gray-900 dark:text-white truncate">{resource.titleBn}</h4>
+                                        <h4 className="font-medium text-gray-900 dark:text-white truncate">{resource.titleBn || resource.title}</h4>
                                         <Badge
                                             size="sm"
                                             style={{ backgroundColor: `${status.color}20`, color: status.color }}
@@ -168,8 +205,14 @@ function ResourceManager({
                                         <span>{resource.categoryBn}</span>
                                         <span>•</span>
                                         <span>{resource.subjectName}</span>
-                                        <span>•</span>
-                                        <span>{formatFileSize(resource.fileSize)}</span>
+                                        {resource.driveLink && (
+                                            <>
+                                                <span>•</span>
+                                                <a href={resource.driveLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-500 hover:underline">
+                                                    <LinkIcon className="h-3 w-3" /> Drive Link
+                                                </a>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -181,9 +224,16 @@ function ResourceManager({
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-1">
-                                    <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-500">
-                                        <Eye className="h-4 w-4" />
-                                    </button>
+                                    {resource.driveLink && (
+                                        <a
+                                            href={resource.driveLink}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-500"
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </a>
+                                    )}
                                     <button
                                         onClick={() => onEdit?.(resource.id)}
                                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-green-500"
@@ -210,11 +260,72 @@ function ResourceManager({
                 )}
             </CardBody>
 
+            {/* Delete Modal */}
             <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete Resource" size="sm">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">Are you sure? This file will be permanently deleted.</p>
                 <div className="flex justify-end gap-3">
                     <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
                     <Button variant="danger" onClick={confirmDelete}>Delete</Button>
+                </div>
+            </Modal>
+
+            {/* Add Resource Modal */}
+            <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Resource" size="lg">
+                <div className="space-y-4">
+                    <Input
+                        label="Title (English)"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="e.g. History Notes"
+                        required
+                    />
+                    <Input
+                        label="Title (Bengali)"
+                        value={formData.titleBn}
+                        onChange={(e) => setFormData({ ...formData, titleBn: e.target.value })}
+                        placeholder="e.g. ইতিহাসের নোট"
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                            <select
+                                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                                value={formData.category}
+                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            >
+                                <option value="notes">Notes</option>
+                                <option value="guides">Guides</option>
+                                <option value="model-papers">Model Papers</option>
+                                <option value="previous-papers">Previous Papers</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+                            <select
+                                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                                value={formData.subject}
+                                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                            >
+                                <option value="bengali">Bengali</option>
+                                <option value="english">English</option>
+                                <option value="history">History</option>
+                                <option value="geography">Geography</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <Input
+                        label="Drive Link (URL)"
+                        value={formData.driveLink}
+                        onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
+                        placeholder="https://drive.google.com/..."
+                        required
+                    />
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                        <Button onClick={handleUploadSubmit} isLoading={uploadLoading}>Save Resource</Button>
+                    </div>
                 </div>
             </Modal>
         </Card>

@@ -12,11 +12,11 @@ import {
 } from '@/types/admin';
 import {
     sampleAdminUser,
-    getAdminStats,
     getRecentActivities,
     getQuickActions,
     getAdminNavItems
 } from '@/data/sampleAdminData';
+import { getAdminDashboardStats, getRealRecentActivities } from '@/lib/admin';
 
 interface UseAdminReturn {
     // User
@@ -58,20 +58,24 @@ export default function useAdmin(): UseAdminReturn {
     const [navItems, setNavItems] = useState<AdminNavItem[]>([]);
 
     // Load data
-    const loadData = () => {
+    const loadData = async () => {
         setLoading(true);
         setError(null);
 
         try {
             // Simulate async fetch
-            setTimeout(() => {
-                setAdminUser(sampleAdminUser);
-                setStats(getAdminStats());
-                setRecentActivities(getRecentActivities(10));
-                setQuickActions(getQuickActions());
-                setNavItems(getAdminNavItems());
-                setLoading(false);
-            }, 300);
+            // Fetch real stats
+            const [realStats, realActivities] = await Promise.all([
+                getAdminDashboardStats(),
+                getRealRecentActivities()
+            ]);
+
+            setAdminUser(sampleAdminUser); // Keep sample user for now as auth is handled by context but this hook might be used deeper
+            setStats(realStats);
+            setRecentActivities(realActivities);
+            setQuickActions(getQuickActions());
+            setNavItems(getAdminNavItems());
+            setLoading(false);
         } catch (err) {
             setError('Failed to load admin data');
             setLoading(false);
@@ -138,11 +142,18 @@ export function useAdminStats() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setStats(getAdminStats());
-            setLoading(false);
-        }, 200);
+        const loadStats = async () => {
+            setLoading(true);
+            try {
+                const data = await getAdminDashboardStats();
+                setStats(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadStats();
     }, []);
 
     return { stats, loading };
@@ -154,11 +165,18 @@ export function useAdminActivities(limit: number = 5) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setActivities(getRecentActivities(limit));
-            setLoading(false);
-        }, 200);
+        const loadActivities = async () => {
+            setLoading(true);
+            try {
+                const data = await getRealRecentActivities();
+                setActivities(data.slice(0, limit));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadActivities();
     }, [limit]);
 
     return { activities, loading };

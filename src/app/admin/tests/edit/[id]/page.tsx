@@ -1,16 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import { AdminLayout } from '@/components/admin';
 import { Card, CardBody, CardHeader, Button, Input, Textarea, Select } from '@/components/ui';
-import { addTest, getSubjects } from '@/lib/admin';
+import { updateTest, getSubjects } from '@/lib/admin';
+import { getTestById } from '@/lib/firebase';
 import { PageLoading } from '@/components/shared';
 import toast from 'react-hot-toast';
 
-export default function NewTestPage() {
+export default function EditTestPage() {
     const router = useRouter();
+    const params = useParams();
+    const id = params.id as string;
+
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [subjects, setSubjects] = useState<any[]>([]);
@@ -28,50 +32,65 @@ export default function NewTestPage() {
     });
 
     useEffect(() => {
-        const loadSubjects = async () => {
+        const loadData = async () => {
             try {
-                const data = await getSubjects();
-                setSubjects(data);
+                const [testData, subjectsData] = await Promise.all([
+                    getTestById(id),
+                    getSubjects()
+                ]);
+
+                if (!testData) {
+                    toast.error('Test not found');
+                    router.push('/admin/tests');
+                    return;
+                }
+
+                setFormData({
+                    title: testData.title || '',
+                    titleBn: testData.titleBn || '',
+                    description: testData.description || '',
+                    subjectId: testData.subjectId || '',
+                    type: testData.type || 'full',
+                    duration: testData.duration || 30,
+                    passingMarks: testData.passingMarks || 40,
+                    totalMarks: testData.totalMarks || 100,
+                    status: testData.isActive ? 'published' : 'draft'
+                });
+
+                setSubjects(subjectsData);
             } catch (error) {
                 console.error(error);
-                toast.error('Failed to load subjects');
+                toast.error('Failed to load data');
             } finally {
                 setInitialLoading(false);
             }
         };
-        loadSubjects();
-    }, []);
+
+        if (id) {
+            loadData();
+        }
+    }, [id, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
-        if (!formData.subjectId) {
-            toast.error('Please select a subject');
-            setLoading(false);
-            return;
-        }
 
         try {
             const subject = subjects.find(s => s.id === formData.subjectId);
 
             const { status, ...testData } = formData;
 
-            await addTest({
+            await updateTest(id, {
                 ...testData,
-                subjectName: subject?.name || 'Unknown',
-                questionCount: 0,
-                attendees: 0,
                 isActive: status === 'published',
-                createdAt: new Date(),
-                passingPercentage: (formData.passingMarks / formData.totalMarks) * 100
-            } as any); // Type assertion for missing fields if necessary, or strict compliance
+                subjectName: subject?.name || 'Unknown'
+            });
 
-            toast.success('Test created successfully!');
+            toast.success('Test updated successfully!');
             router.push('/admin/tests');
         } catch (error) {
             console.error(error);
-            toast.error('Failed to create test');
+            toast.error('Failed to update test');
         } finally {
             setLoading(false);
         }
@@ -79,14 +98,14 @@ export default function NewTestPage() {
 
     if (initialLoading) {
         return (
-            <AdminLayout title="Add Test" titleBn="টেস্ট যোগ করুন">
-                <PageLoading message="Loading..." />
+            <AdminLayout title="Edit Test" titleBn="টেস্ট সম্পাদনা">
+                <PageLoading message="Loading test data..." />
             </AdminLayout>
         );
     }
 
     return (
-        <AdminLayout title="Add Test" titleBn="টেস্ট যোগ করুন">
+        <AdminLayout title="Edit Test" titleBn="টেস্ট সম্পাদনা">
             <div className="mb-6">
                 <Button
                     variant="ghost"
@@ -181,7 +200,7 @@ export default function NewTestPage() {
                                     isLoading={loading}
                                     leftIcon={<Save className="h-4 w-4" />}
                                 >
-                                    Create Test
+                                    Update Test
                                 </Button>
                             </CardBody>
                         </Card>

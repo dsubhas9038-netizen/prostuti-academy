@@ -35,6 +35,7 @@ interface UserManagerProps {
     onSuspend?: (id: string) => void;
     onDelete?: (id: string) => void;
     className?: string;
+    currentUserRole?: string;
 }
 
 // Sample users
@@ -73,7 +74,8 @@ function UserManager({
     onEdit,
     onSuspend,
     onDelete,
-    className
+    className,
+    currentUserRole = 'user'
 }: UserManagerProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterRole, setFilterRole] = useState<string>('all');
@@ -85,10 +87,10 @@ function UserManager({
 
     // Filter users
     const filteredUsers = users.filter(u => {
-        const matchesSearch = u.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = filterRole === 'all' || u.role === filterRole;
-        const matchesStatus = filterStatus === 'all' || u.status === filterStatus;
+        const matchesSearch = (u.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesRole = filterRole === 'all' || (u.role || 'user') === filterRole;
+        const matchesStatus = filterStatus === 'all' || (u.status || 'active') === filterStatus;
         return matchesSearch && matchesRole && matchesStatus;
     });
 
@@ -138,7 +140,7 @@ function UserManager({
                         <p className="text-xs text-gray-500">Total Users</p>
                     </div>
                     <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl text-center">
-                        <p className="text-2xl font-bold text-green-600">{users.filter(u => u.status === 'active').length}</p>
+                        <p className="text-2xl font-bold text-green-600">{users.filter(u => (u.status || 'active') === 'active').length}</p>
                         <p className="text-xs text-gray-500">Active</p>
                     </div>
                     <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl text-center">
@@ -146,7 +148,7 @@ function UserManager({
                         <p className="text-xs text-gray-500">Suspended</p>
                     </div>
                     <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-center">
-                        <p className="text-2xl font-bold text-purple-600">{users.filter(u => u.role !== 'user').length}</p>
+                        <p className="text-2xl font-bold text-purple-600">{users.filter(u => (u.role || 'user') !== 'user').length}</p>
                         <p className="text-xs text-gray-500">Admins</p>
                     </div>
                 </div>
@@ -201,9 +203,12 @@ function UserManager({
                         </thead>
                         <tbody>
                             {filteredUsers.map((user) => {
-                                const status = statusConfig[user.status];
+                                const userStatus = user.status || 'active'; // Default to active if missing
+                                const userRole = user.role || 'user'; // Default to user if missing
+
+                                const status = statusConfig[userStatus] || statusConfig.active;
                                 const StatusIcon = status.icon;
-                                const roleConfig = user.role !== 'user' ? adminRoleConfig[user.role as AdminRole] : null;
+                                const roleConfig = userRole !== 'user' ? adminRoleConfig[userRole as AdminRole] : null;
 
                                 return (
                                     <tr
@@ -212,7 +217,7 @@ function UserManager({
                                     >
                                         <td className="p-3">
                                             <div className="flex items-center gap-3">
-                                                <Avatar fallback={user.displayName[0]} size="sm" />
+                                                <Avatar fallback={(user.displayName || '?')[0]} size="sm" />
                                                 <div>
                                                     <p className="font-medium text-gray-900 dark:text-white">{user.displayName}</p>
                                                     <p className="text-xs text-gray-500">{user.email}</p>
@@ -244,29 +249,43 @@ function UserManager({
                                             </Badge>
                                         </td>
                                         <td className="p-3 text-sm text-gray-600 dark:text-gray-400">
-                                            {user.questionsAnswered} Q / {user.testsCompleted} T
+                                            {user.questionsAnswered || 0} Q / {user.testsCompleted || 0} T
                                         </td>
-                                        <td className="p-3 text-sm text-gray-500">{formatTimeAgo(user.lastLoginAt)}</td>
+                                        <td className="p-3 text-sm text-gray-500">{user.lastLoginAt ? formatTimeAgo(user.lastLoginAt) : 'Never'}</td>
                                         <td className="p-3">
                                             <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={() => onEdit?.(user.id)}
-                                                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-500"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAction('suspend', user.id)}
-                                                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-yellow-500"
-                                                >
-                                                    {user.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAction('delete', user.id)}
-                                                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-red-500"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                {/* Only allow editing/deleting if current user is super_admin OR target user is NOT super_admin */}
+                                                {(currentUserRole === 'super_admin' || userRole !== 'super_admin') && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => onEdit?.(user.id)}
+                                                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-500"
+                                                            title="Edit User"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAction('suspend', user.id)}
+                                                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-yellow-500"
+                                                            title={user.status === 'active' ? "Suspend User" : "Activate User"}
+                                                        >
+                                                            {user.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAction('delete', user.id)}
+                                                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-red-500"
+                                                            title="Delete User"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {currentUserRole !== 'super_admin' && userRole === 'super_admin' && (
+                                                    <div className="flex flex-col items-center" title="Only Super Admin can manage this user / শুধুমাত্র সুপার অ্যাডমিন এই ব্যবহারকারীকে পরিচালনা করতে পারেন">
+                                                        <span className="text-xs text-gray-400 italic px-2">Protected</span>
+                                                        <span className="text-[10px] text-gray-400 font-bengali">সংরক্ষিত</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

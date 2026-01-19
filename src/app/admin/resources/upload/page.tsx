@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, FileText } from 'lucide-react';
 import { AdminLayout } from '@/components/admin';
-import { Card, CardBody, CardHeader, Button, Input, Textarea, Select } from '@/components/ui';
+import { Card, CardBody, CardHeader, Button, Input, Textarea, Select, buttonVariants } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 export default function UploadResourcePage() {
     const router = useRouter();
@@ -99,9 +100,15 @@ export default function UploadResourcePage() {
                                                 onChange={handleFileChange}
                                             />
                                             <label htmlFor="file-upload">
-                                                <Button type="button" variant="outline" as="span">
+                                                <div className={cn(
+                                                    'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg',
+                                                    'active:scale-[0.98] border-2',
+                                                    buttonVariants.variant['outline'],
+                                                    buttonVariants.size['md'],
+                                                    'cursor-pointer'
+                                                )}>
                                                     Choose File
-                                                </Button>
+                                                </div>
                                             </label>
                                         </>
                                     )}
@@ -198,7 +205,7 @@ export default function UploadResourcePage() {
                                 <Button
                                     type="submit"
                                     className="w-full"
-                                    loading={loading}
+                                    isLoading={loading}
                                     disabled={!file}
                                     leftIcon={<Save className="h-4 w-4" />}
                                 >

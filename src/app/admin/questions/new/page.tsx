@@ -1,41 +1,104 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus } from 'lucide-react';
 import { AdminLayout } from '@/components/admin';
 import { Card, CardBody, CardHeader, Button, Input, Textarea, Select } from '@/components/ui';
+import { addQuestion, getSubjects, getAllChapters } from '@/lib/admin';
+import { PageLoading } from '@/components/shared';
+import toast from 'react-hot-toast';
 
 export default function NewQuestionPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+
+    // Data for dropdowns
+    const [subjects, setSubjects] = useState<any[]>([]);
+    const [chapters, setChapters] = useState<any[]>([]);
+
     const [formData, setFormData] = useState({
-        title: '',
-        titleBn: '',
-        content: '',
+        question: '',
+        questionBn: '',
+        answer: '',
+        answerBn: '',
         type: 'short',
-        subject: '',
-        chapter: '',
+        subjectId: '',
+        chapterId: '',
         difficulty: 'medium',
         marks: 5,
-        expectedAnswer: '',
-        tags: ''
+        tags: '',
+        status: 'published'
     });
+
+    useEffect(() => {
+        const loadMetadata = async () => {
+            try {
+                const [subjectsData, chaptersData] = await Promise.all([
+                    getSubjects(),
+                    getAllChapters()
+                ]);
+                setSubjects(subjectsData);
+                setChapters(chaptersData);
+            } catch (error) {
+                console.error(error);
+                toast.error('Failed to load metadata');
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        loadMetadata();
+    }, []);
+
+    const filteredChapters = formData.subjectId
+        ? chapters.filter(c => c.subjectId === formData.subjectId)
+        : [];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!formData.subjectId || !formData.chapterId) {
+            toast.error('Please select both Subject and Chapter');
+            setLoading(false);
+            return;
+        }
 
-        alert('Question created successfully!');
-        router.push('/admin/questions');
+        try {
+            const subject = subjects.find(s => s.id === formData.subjectId);
+            const chapter = chapters.find(c => c.id === formData.chapterId);
+
+            await addQuestion({
+                ...formData,
+                subjectName: subject?.name || 'Unknown',
+                chapterName: chapter?.title || 'Unknown',
+                views: 0,
+                isActive: formData.status === 'published',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+
+            toast.success('Question created successfully!');
+            router.push('/admin/questions');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to create question');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    if (initialLoading) {
+        return (
+            <AdminLayout title="Add Question" titleBn="প্রশ্ন যোগ করুন">
+                <PageLoading message="Loading options..." />
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout title="Add Question" titleBn="প্রশ্ন যোগ করুন">
-            {/* Back Button */}
             <div className="mb-6">
                 <Button
                     variant="ghost"
@@ -48,9 +111,7 @@ export default function NewQuestionPage() {
 
             <form onSubmit={handleSubmit}>
                 <div className="grid lg:grid-cols-3 gap-6">
-                    {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Question Details */}
                         <Card>
                             <CardHeader
                                 title="Question Details"
@@ -58,45 +119,61 @@ export default function NewQuestionPage() {
                                 icon={<span className="text-xl">📝</span>}
                             />
                             <CardBody className="space-y-4">
-                                <Input
-                                    label="Question Title"
-                                    placeholder="Enter a brief title for the question"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    required
-                                />
-                                <Input
-                                    label="Title (Bengali)"
-                                    placeholder="বাংলায় প্রশ্নের শিরোনাম লিখুন"
-                                    value={formData.titleBn}
-                                    onChange={(e) => setFormData({ ...formData, titleBn: e.target.value })}
-                                />
-                                <Textarea
-                                    label="Question Content"
-                                    placeholder="Enter the full question text..."
-                                    rows={6}
-                                    value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    required
-                                />
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Question Text (English)
+                                    </label>
+                                    <Textarea
+                                        placeholder="Enter question in English..."
+                                        rows={3}
+                                        value={formData.question}
+                                        onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Question Text (Bengali)
+                                    </label>
+                                    <Textarea
+                                        placeholder="বাংলায় প্রশ্ন লিখুন..."
+                                        rows={3}
+                                        value={formData.questionBn}
+                                        onChange={(e) => setFormData({ ...formData, questionBn: e.target.value })}
+                                        required
+                                    />
+                                </div>
                             </CardBody>
                         </Card>
 
-                        {/* Expected Answer */}
                         <Card>
                             <CardHeader
                                 title="Expected Answer"
                                 subtitle="Model answer for this question"
                                 icon={<span className="text-xl">✅</span>}
                             />
-                            <CardBody>
-                                <Textarea
-                                    label="Model Answer"
-                                    placeholder="Enter the expected/ideal answer..."
-                                    rows={8}
-                                    value={formData.expectedAnswer}
-                                    onChange={(e) => setFormData({ ...formData, expectedAnswer: e.target.value })}
-                                />
+                            <CardBody className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Answer (English)
+                                    </label>
+                                    <Textarea
+                                        placeholder="Enter model answer in English..."
+                                        rows={4}
+                                        value={formData.answer}
+                                        onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Answer (Bengali)
+                                    </label>
+                                    <Textarea
+                                        placeholder="বাংলায় উত্তর লিখুন..."
+                                        rows={4}
+                                        value={formData.answerBn}
+                                        onChange={(e) => setFormData({ ...formData, answerBn: e.target.value })}
+                                    />
+                                </div>
                             </CardBody>
                         </Card>
                     </div>
@@ -151,27 +228,21 @@ export default function NewQuestionPage() {
                             <CardBody className="space-y-4">
                                 <Select
                                     label="Subject"
-                                    value={formData.subject}
-                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                    value={formData.subjectId}
+                                    onChange={(e) => setFormData({ ...formData, subjectId: e.target.value, chapterId: '' })}
                                     options={[
                                         { value: '', label: 'Select Subject' },
-                                        { value: 'bengali', label: 'Bengali' },
-                                        { value: 'english', label: 'English' },
-                                        { value: 'history', label: 'History' },
-                                        { value: 'geography', label: 'Geography' },
-                                        { value: 'philosophy', label: 'Philosophy' },
-                                        { value: 'political-science', label: 'Political Science' }
+                                        ...subjects.map(s => ({ value: s.id, label: s.name }))
                                     ]}
                                 />
                                 <Select
                                     label="Chapter"
-                                    value={formData.chapter}
-                                    onChange={(e) => setFormData({ ...formData, chapter: e.target.value })}
+                                    value={formData.chapterId}
+                                    onChange={(e) => setFormData({ ...formData, chapterId: e.target.value })}
+                                    disabled={!formData.subjectId}
                                     options={[
                                         { value: '', label: 'Select Chapter' },
-                                        { value: 'ch1', label: 'Chapter 1' },
-                                        { value: 'ch2', label: 'Chapter 2' },
-                                        { value: 'ch3', label: 'Chapter 3' }
+                                        ...filteredChapters.map(c => ({ value: c.id, label: c.title }))
                                     ]}
                                 />
                                 <Input
@@ -189,18 +260,10 @@ export default function NewQuestionPage() {
                                 <Button
                                     type="submit"
                                     className="w-full"
-                                    loading={loading}
+                                    isLoading={loading}
                                     leftIcon={<Save className="h-4 w-4" />}
                                 >
                                     Save Question
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full"
-                                    leftIcon={<Plus className="h-4 w-4" />}
-                                >
-                                    Save & Add Another
                                 </Button>
                             </CardBody>
                         </Card>

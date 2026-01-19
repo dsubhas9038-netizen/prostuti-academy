@@ -56,3 +56,12 @@ export {
 // Breadcrumb
 export { Breadcrumb } from './Breadcrumb';
 export type { BreadcrumbItem, BreadcrumbProps } from './Breadcrumb';
+
+// Select
+export { Select } from './Select';
+export type { SelectProps, SelectOption } from './Select';
+
+// Checkbox
+export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+

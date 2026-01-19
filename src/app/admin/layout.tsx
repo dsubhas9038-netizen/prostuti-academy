@@ -5,10 +5,16 @@ export const metadata: Metadata = {
     description: 'Admin dashboard for managing content and users',
 };
 
+import AdminGuard from '@/components/auth/AdminGuard';
+
 export default function AdminRootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    return <>{children}</>;
+    return (
+        <AdminGuard>
+            {children}
+        </AdminGuard>
+    );
 }

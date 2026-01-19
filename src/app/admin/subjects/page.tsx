@@ -1,34 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Filter, BookOpen, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, Search, BookOpen } from 'lucide-react';
 import { AdminLayout } from '@/components/admin';
-import { Card, CardBody, CardHeader, Button, Input, Badge, Modal } from '@/components/ui';
-import { sampleSubjects } from '@/data/sampleSubjects';
-
-interface Subject {
-    id: string;
-    name: string;
-    nameBn: string;
-    icon: string;
-    color: string;
-    stream: string;
-    semesters: number[];
-    totalChapters: number;
-    totalQuestions: number;
-    order: number;
-    isActive: boolean;
-}
+import { Card, CardBody, Button, Input, Badge, Modal } from '@/components/ui';
+import { PageLoading } from '@/components/shared';
+// Import from new admin service
+import { getSubjects, addSubject, updateSubject, deleteSubject, Subject } from '@/lib/admin';
+import toast from 'react-hot-toast';
 
 export default function AdminSubjectsPage() {
-    const [subjects, setSubjects] = useState<Subject[]>(sampleSubjects);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStream, setFilterStream] = useState<string>('all');
+
+    // Modal & Form States
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-    const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+    const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
 
-    // Form state
+    // ...
+
+
+
+    // ...
+
+    // In JSX:
+    // setDeleteSubjectData(subject) -> setSubjectToDelete(subject)
+    // if (deleteSubject) -> if (subjectToDelete)
+    const [actionLoading, setActionLoading] = useState(false);
+
+    // Form data state
     const [formData, setFormData] = useState({
         name: '',
         nameBn: '',
@@ -38,6 +41,24 @@ export default function AdminSubjectsPage() {
         isActive: true
     });
 
+    // 1. Load Data
+    const loadSubjects = async () => {
+        try {
+            setLoading(true);
+            const data = await getSubjects();
+            setSubjects(data);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load subjects');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSubjects();
+    }, []);
+
     // Filter subjects
     const filteredSubjects = subjects.filter(subject => {
         const matchesSearch = subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -46,47 +67,77 @@ export default function AdminSubjectsPage() {
         return matchesSearch && matchesStream;
     });
 
-    // Handle add subject
-    const handleAddSubject = () => {
-        const newSubject: Subject = {
-            id: `subject-${Date.now()}`,
-            name: formData.name,
-            nameBn: formData.nameBn,
-            icon: formData.icon,
-            color: formData.color,
-            stream: formData.stream,
-            semesters: [1, 2, 3, 4],
-            totalChapters: 0,
-            totalQuestions: 0,
-            order: subjects.length + 1,
-            isActive: formData.isActive
-        };
-        setSubjects([...subjects, newSubject]);
-        setIsAddModalOpen(false);
-        resetForm();
-        alert('Subject added successfully!');
+    // 2. Handle Add
+    const handleAddSubject = async () => {
+        try {
+            setActionLoading(true);
+            await addSubject({
+                name: formData.name,
+                nameBn: formData.nameBn,
+                icon: formData.icon,
+                color: formData.color,
+                stream: formData.stream,
+                semesters: [1, 2, 3, 4], // Default semesters
+                totalChapters: 0,
+                totalQuestions: 0,
+                order: subjects.length + 1,
+                isActive: formData.isActive
+            });
+            await loadSubjects(); // Reload
+            setIsAddModalOpen(false);
+            resetForm();
+            toast.success('Subject added successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to add subject');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
-    // Handle edit subject
-    const handleEditSubject = () => {
+    // 3. Handle Edit
+    const handleEditSubject = async () => {
         if (!editingSubject) return;
-        setSubjects(subjects.map(s =>
-            s.id === editingSubject.id ? { ...s, ...formData } : s
-        ));
-        setEditingSubject(null);
-        resetForm();
-        alert('Subject updated successfully!');
+        try {
+            setActionLoading(true);
+            await updateSubject(editingSubject.id, {
+                name: formData.name,
+                nameBn: formData.nameBn,
+                icon: formData.icon,
+                color: formData.color,
+                stream: formData.stream,
+                isActive: formData.isActive
+            });
+            await loadSubjects(); // Reload
+            setEditingSubject(null);
+            resetForm();
+            toast.success('Subject updated successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update subject');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
-    // Handle delete subject
-    const handleDeleteSubject = () => {
-        if (!deleteSubject) return;
-        setSubjects(subjects.filter(s => s.id !== deleteSubject.id));
-        setDeleteSubject(null);
-        alert('Subject deleted successfully!');
+    // 4. Handle Delete
+    const handleDeleteSubject = async () => {
+        if (!subjectToDelete) return;
+        try {
+            setActionLoading(true);
+            await deleteSubject(subjectToDelete.id);
+            await loadSubjects(); // Reload
+            setSubjectToDelete(null);
+            toast.success('Subject deleted successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to delete subject');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
-    // Reset form
+    // Helper functions
     const resetForm = () => {
         setFormData({
             name: '',
@@ -98,7 +149,6 @@ export default function AdminSubjectsPage() {
         });
     };
 
-    // Open edit modal
     const openEditModal = (subject: Subject) => {
         setFormData({
             name: subject.name,
@@ -113,6 +163,14 @@ export default function AdminSubjectsPage() {
 
     const icons = ['📕', '📗', '📘', '📙', '📓', '📔', '📒', '📚', '📖', '🎓'];
     const colors = ['#DC2626', '#059669', '#2563EB', '#D97706', '#7C3AED', '#DB2777', '#0891B2', '#CA8A04'];
+
+    if (loading) {
+        return (
+            <AdminLayout title="Manage Subjects" titleBn="বিষয় পরিচালনা">
+                <PageLoading message="Loading subjects..." />
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout title="Manage Subjects" titleBn="বিষয় পরিচালনা">
@@ -189,7 +247,7 @@ export default function AdminSubjectsPage() {
                                         <Edit2 className="h-4 w-4 text-gray-500" />
                                     </button>
                                     <button
-                                        onClick={() => setDeleteSubject(subject)}
+                                        onClick={() => setSubjectToDelete(subject)}
                                         className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                                     >
                                         <Trash2 className="h-4 w-4 text-red-500" />
@@ -262,8 +320,8 @@ export default function AdminSubjectsPage() {
                                         type="button"
                                         onClick={() => setFormData({ ...formData, icon })}
                                         className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl border-2 transition-all ${formData.icon === icon
-                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                                             }`}
                                     >
                                         {icon}
@@ -283,8 +341,8 @@ export default function AdminSubjectsPage() {
                                         type="button"
                                         onClick={() => setFormData({ ...formData, color })}
                                         className={`w-8 h-8 rounded-full border-2 transition-all ${formData.color === color
-                                                ? 'border-gray-900 dark:border-white scale-110'
-                                                : 'border-transparent hover:scale-105'
+                                            ? 'border-gray-900 dark:border-white scale-110'
+                                            : 'border-transparent hover:scale-105'
                                             }`}
                                         style={{ backgroundColor: color }}
                                     />
@@ -329,12 +387,15 @@ export default function AdminSubjectsPage() {
                                     setEditingSubject(null);
                                     resetForm();
                                 }}
+                                disabled={actionLoading}
                             >
                                 Cancel
                             </Button>
                             <Button
                                 className="flex-1"
                                 onClick={editingSubject ? handleEditSubject : handleAddSubject}
+                                isLoading={actionLoading}
+                                disabled={actionLoading}
                             >
                                 {editingSubject ? 'Save Changes' : 'Add Subject'}
                             </Button>
@@ -344,22 +405,23 @@ export default function AdminSubjectsPage() {
             )}
 
             {/* Delete Confirmation Modal */}
-            {deleteSubject && (
+            {subjectToDelete && (
                 <Modal
-                    isOpen={true}
-                    onClose={() => setDeleteSubject(null)}
-                    title="Delete Subject"
+                    isOpen={!!subjectToDelete}
+                    onClose={() => setSubjectToDelete(null)}
+                    title="Confirm Delete"
                 >
-                    <div className="space-y-4">
-                        <p className="text-gray-600 dark:text-gray-400">
-                            Are you sure you want to delete <strong>{deleteSubject.name}</strong>?
-                            This will also delete all chapters and questions under this subject.
+                    <div>
+                        <p className="mb-4">
+                            Are you sure you want to delete <span className="font-semibold">{subjectToDelete?.name}</span>?
+                            This action cannot be undone.
                         </p>
                         <div className="flex gap-3">
                             <Button
                                 variant="outline"
                                 className="flex-1"
-                                onClick={() => setDeleteSubject(null)}
+                                onClick={() => setSubjectToDelete(null)}
+                                disabled={actionLoading}
                             >
                                 Cancel
                             </Button>
@@ -367,6 +429,8 @@ export default function AdminSubjectsPage() {
                                 variant="danger"
                                 className="flex-1"
                                 onClick={handleDeleteSubject}
+                                isLoading={actionLoading}
+                                disabled={actionLoading}
                             >
                                 Delete Subject
                             </Button>

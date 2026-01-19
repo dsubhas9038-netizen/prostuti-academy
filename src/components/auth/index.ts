@@ -12,3 +12,4 @@ export { default as OnboardingModal } from './OnboardingModal';
 // Route Guards
 export { default as ProtectedRoute } from './ProtectedRoute';
 export { default as GuestRoute } from './GuestRoute';
+export { default as AdminGuard } from './AdminGuard';

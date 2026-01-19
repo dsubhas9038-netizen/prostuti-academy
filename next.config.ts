@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Enable React Strict Mode
   reactStrictMode: true,
-
   // Image optimization
   images: {
     remotePatterns: [
